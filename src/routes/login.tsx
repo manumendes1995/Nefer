@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { authClient, authEnabled, signIn, GROK_PROVIDERS } from "@/lib/auth/client";
+import { authClient, authEnabled } from "@/lib/auth/client";
 
 export const Route = createFileRoute("/login")({ component: Login });
 
@@ -15,76 +15,57 @@ function Login() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
-    setError("");
-    const result =
-      mode === "up"
-        ? await authClient.signUp.email({ email, password, name: name || email, callbackURL: "/" })
-        : await authClient.signIn.email({ email, password, callbackURL: "/" });
-    setBusy(false);
-    if (result.error) {
-      setError(result.error.message || "Could not sign in.");
+    const mail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+      setError("Escreve um email válido.");
       return;
     }
-    await navigate({ to: "/" });
+    if (password.length < 8) {
+      setError("A palavra-passe precisa de pelo menos 8 caracteres.");
+      return;
+    }
+    if (mode === "up" && name.trim().length < 2) {
+      setError("Escreve o teu nome.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const result =
+        mode === "up"
+          ? await authClient.signUp.email({ email: mail, password, name: name.trim(), callbackURL: "/" })
+          : await authClient.signIn.email({ email: mail, password, callbackURL: "/" });
+      if (result.error) {
+        const message = result.error.message || "Não foi possível entrar.";
+        setError(/origin/i.test(message) ? "Na Vercel, BETTER_AUTH_URL tem de ser exatamente o link do site, com https." : message);
+        return;
+      }
+      await navigate({ to: "/" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível entrar.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <main className="grid min-h-screen place-items-center bg-bg px-4 text-fg">
       <div className="w-full max-w-sm">
-        <p className="font-display text-4xl text-gold">Atelier</p>
-        <h1 className="mt-3 font-display text-3xl">{mode === "up" ? "Create your studio" : "Welcome back"}</h1>
-        <p className="mt-2 text-sm text-muted">3 days free. Then £15.99 a month. Your face is never redrawn.</p>
+        <p className="font-display text-4xl text-gold">Nefer</p>
+        <h1 className="mt-3 font-display text-3xl">{mode === "up" ? "Criar conta" : "Entrar"}</h1>
+        <p className="mt-2 text-sm text-muted">3 dias grátis. Depois £15.99 por mês. O teu email entra sem pagar.</p>
         {!authEnabled ? (
-          <p className="mt-6 text-sm text-muted">Sign-in is disabled.</p>
+          <p className="mt-6 text-sm text-muted">O registo está desligado.</p>
         ) : (
           <form onSubmit={submit} className="mt-6 grid gap-3">
             {mode === "up" && (
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Name"
-                className="min-h-11 rounded-xl border border-line bg-surface px-3"
-              />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" className="min-h-11 rounded-xl border border-line bg-surface px-3" />
             )}
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="min-h-11 rounded-xl border border-line bg-surface px-3"
-            />
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password, 8+ characters"
-              className="min-h-11 rounded-xl border border-line bg-surface px-3"
-            />
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="min-h-11 rounded-xl border border-line bg-surface px-3" />
+            <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Palavra-passe, 8 caracteres" className="min-h-11 rounded-xl border border-line bg-surface px-3" />
             {error && <p className="text-sm text-gold">{error}</p>}
-            <button type="submit" disabled={busy} className="min-h-11 rounded-full bg-gold text-gold-ink">
-              {busy ? "…" : mode === "up" ? "Start free trial" : "Sign in"}
-            </button>
-            <button
-              type="button"
-              className="min-h-11 text-sm text-muted"
-              onClick={() => setMode(mode === "up" ? "in" : "up")}
-            >
-              {mode === "up" ? "I already have an account" : "Create an account"}
-            </button>
-            {GROK_PROVIDERS.map((p) => (
-              <button
-                key={p.providerId}
-                type="button"
-                onClick={() => signIn(p.providerId, { callbackURL: "/" })}
-                className="min-h-11 rounded-full border border-line"
-              >
-                Continue with {p.label}
-              </button>
-            ))}
+            <button type="submit" disabled={busy} className="min-h-11 rounded-full bg-gold text-gold-ink">{busy ? "…" : mode === "up" ? "Criar conta" : "Entrar"}</button>
+            <button type="button" className="min-h-11 text-sm text-muted" onClick={() => setMode(mode === "up" ? "in" : "up")}>{mode === "up" ? "Já tenho conta" : "Criar conta"}</button>
           </form>
         )}
       </div>

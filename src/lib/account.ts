@@ -2,8 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 
-const TRIAL_MS = 3 * 24 * 60 * 60 * 1000;
+const OWNER_EMAIL = "manumendes199514@gmail.com";
 const PRICE = 1599;
+const TRIAL_MS = 3 * 24 * 60 * 60 * 1000;
 
 type AccountRow = {
   user_id: string;
@@ -15,6 +16,12 @@ type AccountRow = {
   api_model: string;
 };
 
+async function isOwner(userId: string) {
+  const sql = await getSql();
+  const rows = await sql<{ email: string }>`select email from "user" where id = ${userId}`;
+  return (rows[0]?.email || "").toLowerCase() === OWNER_EMAIL;
+}
+
 async function loadAccount(userId: string) {
   const sql = await getSql();
   await sql`insert into atelier_accounts (user_id) values (${userId}) on conflict (user_id) do nothing`;
@@ -22,14 +29,14 @@ async function loadAccount(userId: string) {
   return rows[0];
 }
 
-function accessOf(row: AccountRow) {
+function accessOf(row: AccountRow, owner: boolean) {
   const started = new Date(row.trial_started).getTime();
   const trialLeft = Math.max(0, TRIAL_MS - (Date.now() - started));
-  const paid = row.plan === "active" && !!row.paid_until && new Date(row.paid_until).getTime() > Date.now();
+  const paid = owner || (row.plan === "active" && !!row.paid_until && new Date(row.paid_until).getTime() > Date.now());
   return {
-    allowed: paid || trialLeft > 0,
+    allowed: owner || paid || trialLeft > 0,
     paid,
-    trialHoursLeft: Math.ceil(trialLeft / 36e5),
+    trialHoursLeft: owner ? 0 : Math.ceil(trialLeft / 36e5),
     price: "£15.99",
     hasKey: Boolean(row.api_key),
     apiBase: row.api_base,
@@ -41,7 +48,7 @@ export const getAccess = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     const row = await loadAccount(context.userId);
-    return accessOf(row);
+    return accessOf(row, await isOwner(context.userId));
   });
 
 export const saveApiKey = createServerFn({ method: "POST" })
@@ -77,7 +84,7 @@ export const startCheckout = createServerFn({ method: "POST" })
     params.set("line_items[0][price_data][currency]", "gbp");
     params.set("line_items[0][price_data][unit_amount]", String(PRICE));
     params.set("line_items[0][price_data][recurring][interval]", "month");
-    params.set("line_items[0][price_data][product_data][name]", "Atelier");
+    params.set("line_items[0][price_data][product_data][name]", "Nefer");
     const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
@@ -111,7 +118,7 @@ export const writeWithKey = createServerFn({ method: "POST" })
   .validator((input: { prompt: string }) => ({ prompt: input.prompt.slice(0, 4000) }))
   .handler(async ({ context, data }) => {
     const row = await loadAccount(context.userId);
-    const access = accessOf(row);
+    const access = accessOf(row, await isOwner(context.userId));
     if (!access.allowed) return { text: "", error: "trial_ended" };
     if (!row.api_key) return { text: "", error: "no_key" };
     const res = await fetch(`${row.api_base}/chat/completions`, {
@@ -120,11 +127,7 @@ export const writeWithKey = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model: row.api_model,
         messages: [
-          {
-            role: "system",
-            content:
-              "You write premium short-form and long-form content. Never invent that a face was altered. Reply in the user's language. Plain text, no markdown fences.",
-          },
+          { role: "system", content: "You write premium short-form and long-form content. Never invent that a face was altered. Reply in the user's language. Plain text, no markdown fences." },
           { role: "user", content: data.prompt },
         ],
       }),
