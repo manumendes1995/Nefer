@@ -21,7 +21,7 @@ import {
 } from "@/lib/studio";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { UserButton } from "@/lib/auth/gates";
-import { confirmCheckout, getAccess, saveApiKey, startCheckout, writeWithKey } from "@/lib/account.server";
+import { confirmCheckout, getAccess, saveApiKey, startCheckout, writeWithKey } from "@/lib/account";
 
 function packText(
   tool: Tool,
