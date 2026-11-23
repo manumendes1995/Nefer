@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Aperture,
   Clapperboard,
-  ImagePlus,
   Sparkles,
   Type,
 } from "lucide-react";
@@ -116,6 +115,19 @@ const tools: { id: Tool; icon: typeof Type }[] = [
 
 const backdrops = ["#1a140c", "#d6a15a", "#2c3a34", "#6e2e2a", "#e7e1d6", "#1d2a44"];
 
+function NeferMark() {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <svg viewBox="0 0 32 32" className="h-10 w-10 shrink-0" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="#1c1a16" stroke="#d6a15a" />
+        <circle cx="16" cy="16" r="7" fill="none" stroke="#d6a15a" strokeWidth="1.4" />
+        <circle cx="16" cy="16" r="2.2" fill="#d6a15a" />
+      </svg>
+      <span className="font-display text-xl text-gold">Nefer</span>
+    </span>
+  );
+}
+
 function HomeGate({ lang, setLanguage }: { lang: Lang; setLanguage: (next: Lang) => void }) {
   const pt = lang === "pt";
   const lines = pt
@@ -153,7 +165,7 @@ function HomeGate({ lang, setLanguage }: { lang: Lang; setLanguage: (next: Lang)
       <div className="nefer-drift pointer-events-none absolute right-0 bottom-0 h-40 w-[140%] bg-gradient-to-r from-transparent via-gold/10 to-transparent" />
       <div className="relative mx-auto grid max-w-3xl gap-8">
         <div className="flex items-center justify-between gap-3">
-          <p className="font-display text-2xl text-gold">Nefer</p>
+          <NeferMark />
           <div className="flex rounded-full border border-line bg-surface p-1">
             <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>English</button>
             <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>Português</button>
@@ -238,7 +250,7 @@ function Studio() {
     return (
       <main className="grid min-h-screen place-items-center bg-bg px-4 text-fg">
         <div className="w-full max-w-md">
-          <img src="/logo.jpg" alt="Nefer" className="h-20 w-20 rounded-xl" />
+          <NeferMark />
           <h1 className="mt-3 font-display text-3xl">{lang === "pt" ? "O teste de 3 dias acabou." : "The 3-day trial is over."}</h1>
           <p className="mt-2 text-muted">£15.99 / {lang === "pt" ? "mês" : "month"}</p>
           <button
@@ -260,18 +272,17 @@ function Studio() {
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-bg pb-24 text-fg md:pb-0">
+    <main className="min-h-screen overflow-x-hidden bg-bg pb-28 text-fg md:pb-0" style={{ paddingBottom: "calc(7.5rem + env(safe-area-inset-bottom))" }}>
       <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-bg/95 px-4 py-3 backdrop-blur md:px-8">
         <div className="flex items-center gap-3">
-          <img src="/logo.jpg" alt="Nefer" className="h-10 w-10 rounded-lg" />
-          <p className="font-display text-xl text-gold">Nefer</p>
+          <NeferMark />
         </div>
         <div className="flex shrink-0 rounded-full border border-line bg-surface p-1" aria-label="Language">
-          <button type="button" onClick={() => setLanguage("en")} className={`min-h-10 rounded-full px-3 text-sm md:px-4 ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>
-            English
+          <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-3 text-sm md:px-4 ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>
+            EN
           </button>
-          <button type="button" onClick={() => setLanguage("pt")} className={`min-h-10 rounded-full px-3 text-sm md:px-4 ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>
-            Português
+          <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-3 text-sm md:px-4 ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>
+            PT
           </button>
         </div>
       </div>
@@ -459,13 +470,13 @@ function Studio() {
           )}
         </section>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex gap-1 overflow-x-auto border-t border-line bg-bg px-2 py-2 md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-3 gap-1 border-t border-line bg-bg px-2 pt-2 md:hidden" style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}>
         {tools.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => setTool(item.id)}
-            className={`flex min-h-11 shrink-0 items-center gap-1 rounded-full px-3 text-xs ${
+            className={`flex min-h-12 w-full items-center justify-center gap-1 rounded-full px-2 text-sm ${
               tool === item.id ? "bg-gold text-gold-ink" : "text-muted"
             }`}
           >
@@ -490,6 +501,7 @@ function VideoDesk({
   caption: string;
 }) {
   const pt = lang === "pt";
+  const pick = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [kind, setKind] = useState<"video" | "image" | "">("");
@@ -498,6 +510,13 @@ function VideoDesk({
   const [clip, setClip] = useState("");
   const [still, setStill] = useState("");
   const [words, setWords] = useState(caption);
+  const [prompts, setPrompts] = useState<string[]>([topic]);
+
+  function writePrompts(next: string[]) {
+    setPrompts(next);
+    const line = next.map((item) => item.trim()).filter(Boolean).join(". ");
+    if (line) setTopic(line);
+  }
 
   async function localAd(dataUrl: string, line: string) {
     const img = new Image();
@@ -524,7 +543,7 @@ function VideoDesk({
     setBusy(true);
     setStatus(pt ? "A preparar…" : "Preparing…");
     if (!file && mode !== "words") {
-      setStatus(pt ? "Carrega primeiro a foto do produto." : "Upload the product photo first.");
+      setStatus(pt ? "Carrega primeiro o vídeo ou a foto." : "Upload the video or photo first.");
       setBusy(false);
       return;
     }
@@ -586,13 +605,13 @@ function VideoDesk({
     const objectUrl = URL.createObjectURL(source);
     const canvas = document.createElement("canvas");
     const draw = (width: number, height: number, el: CanvasImageSource) => {
-      const scale = Math.min(1, 768 / Math.max(width, height));
+      const scale = Math.min(1, 1280 / Math.max(width, height));
       canvas.width = Math.max(1, Math.round(width * scale));
       canvas.height = Math.max(1, Math.round(height * scale));
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("no canvas");
       ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL("image/jpeg", 0.72);
+      return canvas.toDataURL("image/jpeg", 0.86);
     };
     if (source.type.startsWith("video")) {
       const video = document.createElement("video");
@@ -622,12 +641,13 @@ function VideoDesk({
         className="grid gap-4 rounded-2xl bg-surface p-4 md:p-5"
         onSubmit={(e) => e.preventDefault()}
       >
-        <label className="grid gap-2 text-sm">
-          {pt ? "O vídeo ou a foto do produto" : "The product video or photo"}
+        <label className="relative flex min-h-28 w-full cursor-pointer items-center justify-center rounded-2xl border border-dashed border-gold bg-bg px-4 text-center text-lg text-gold">
+          <span className="pointer-events-none px-2">{file ? file.name : pt ? "Carregar vídeo ou foto" : "Upload video or photo"}</span>
           <input
+            ref={pick}
             type="file"
             accept="video/*,image/*"
-            className="text-sm"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             onChange={(e) => {
               const next = e.target.files?.[0];
               if (!next) return;
@@ -639,23 +659,35 @@ function VideoDesk({
         </label>
         {fileUrl && kind === "video" && <video src={fileUrl} controls className="max-h-80 w-full rounded-2xl bg-black" />}
         {fileUrl && kind === "image" && <img src={fileUrl} alt="" className="max-h-80 w-full rounded-2xl object-contain" />}
-        <label className="grid gap-2 text-sm">
-          {pt ? "Quero isto" : "I want this"}
-          <textarea
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            rows={3}
-            className="w-full resize-none rounded-xl border border-line bg-bg px-3 py-3 text-base text-fg outline-none"
-          />
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => void run("photo")} className="min-h-11 rounded-full bg-gold px-5 text-gold-ink">
-            {busy ? "…" : pt ? "Criar anúncio" : "Create ad"}
+        <div className="grid gap-3">
+          <p className="text-sm text-gold">{pt ? "Prompt do vídeo" : "Video prompt"}</p>
+          {prompts.map((line, i) => (
+            <textarea
+              key={i}
+              value={line}
+              rows={3}
+              placeholder={pt ? "Viragem lenta, parede limpa, luz de hotel" : "Slow turn, clean wall, warm hotel light"}
+              onChange={(e) => writePrompts(prompts.map((item, n) => (n === i ? e.target.value : item)))}
+              className="w-full resize-none rounded-xl border border-line bg-bg px-3 py-3 text-base text-fg outline-none"
+            />
+          ))}
+          <div className="grid grid-cols-1 gap-2">
+            <button type="button" onClick={() => writePrompts([...prompts, ""])} className="min-h-12 w-full rounded-full bg-gold px-5 text-gold-ink">
+              {pt ? "Adicionar" : "Add"}
+            </button>
+            <button type="button" onClick={() => writePrompts(prompts.length > 1 ? prompts.slice(0, -1) : prompts)} className="min-h-12 w-full rounded-full border border-line px-5">
+              {pt ? "Remover" : "Remove"}
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          <button type="button" disabled={busy} onClick={() => void run("video")} className="min-h-12 w-full rounded-full bg-gold px-5 text-gold-ink">
+            {busy ? "…" : pt ? "Criar vídeo" : "Create video"}
           </button>
-          <button type="button" disabled={busy} onClick={() => void run("video")} className="min-h-11 rounded-full border border-gold px-5 text-gold">
-            {pt ? "Criar vídeo" : "Create video"}
+          <button type="button" disabled={busy} onClick={() => void run("photo")} className="min-h-12 w-full rounded-full border border-gold px-5 text-gold">
+            {pt ? "Criar anúncio" : "Create ad"}
           </button>
-          <button type="button" disabled={busy} onClick={() => void run("words")} className="min-h-11 rounded-full border border-line px-5">
+          <button type="button" disabled={busy} onClick={() => void run("words")} className="min-h-12 w-full rounded-full border border-line px-5">
             {pt ? "Criar texto" : "Create copy"}
           </button>
         </div>
@@ -663,7 +695,7 @@ function VideoDesk({
       </form>
       <div className="rounded-2xl border border-line p-4">
         <p className="text-xs text-gold">{pt ? "Texto" : "Copy"}</p>
-        <p className="mt-2 whitespace-pre-wrap text-sm">{words}</p>
+        <p className="mt-2 whitespace-pre-wrap break-words text-sm">{words}</p>
       </div>
       {still && (
         <a href={still} download="nefer-ad.jpg" className="block">
@@ -702,6 +734,9 @@ function PhotoLab({ lang }: { lang: Lang }) {
   const [cropOn, setCropOn] = useState(false);
   const [crop, setCrop] = useState({ t: 0, r: 0, b: 0, l: 0 });
   const [wish, setWish] = useState("");
+  const [prompts, setPrompts] = useState<string[]>([""]);
+  const [made, setMade] = useState("");
+  const [making, setMaking] = useState(false);
   const [sceneId, setSceneId] = useState("studio");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scene = scenes.find((s) => s.id === sceneId) ?? scenes[0];
@@ -770,13 +805,12 @@ function PhotoLab({ lang }: { lang: Lang }) {
   return (
     <div className="grid gap-4">
       <p className="text-sm text-muted">{t.plain}</p>
-      <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-gold">
-        <ImagePlus className="h-4 w-4" />
-        {t.upload}
+      <label className="relative flex min-h-28 w-full cursor-pointer items-center justify-center rounded-2xl border border-dashed border-gold bg-bg px-4 text-center text-lg text-gold">
+        <span className="pointer-events-none">{t.upload}</span>
         <input
           type="file"
           accept="image/*"
-          className="sr-only"
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (!file) return;
@@ -791,6 +825,48 @@ function PhotoLab({ lang }: { lang: Lang }) {
       ) : (
         <p className="rounded-2xl border border-dashed border-line p-8 text-muted">{t.upload}</p>
       )}
+      <div className="grid gap-3 rounded-2xl border border-line p-4">
+        <p className="text-sm text-gold">{lang === "pt" ? "Prompts da imagem" : "Image prompts"}</p>
+        {prompts.map((line, i) => (
+          <textarea
+            key={i}
+            value={line}
+            rows={2}
+            placeholder={lang === "pt" ? "Luz de hotel, parede limpa, sem mudar a cara" : "Hotel light, clean wall, do not change the face"}
+            onChange={(e) => setPrompts(prompts.map((item, n) => (n === i ? e.target.value : item)))}
+            className="w-full resize-none rounded-xl border border-line bg-bg px-3 py-3 text-base text-fg outline-none"
+          />
+        ))}
+        <div className="grid grid-cols-1 gap-2">
+          <button type="button" onClick={() => setPrompts([...prompts, ""])} className="min-h-12 w-full rounded-full bg-gold px-5 text-gold-ink">
+            {lang === "pt" ? "Adicionar" : "Add"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPrompts(prompts.length > 1 ? prompts.slice(0, -1) : [""])}
+            className="min-h-12 w-full rounded-full border border-line px-5"
+          >
+            {lang === "pt" ? "Remover" : "Remove"}
+          </button>
+          <button
+            type="button"
+            disabled={making || !src}
+            onClick={() => {
+              const text = prompts.map((p) => p.trim()).filter(Boolean).join(". ");
+              if (!src || text.length < 3) return;
+              setMaking(true);
+              void makeStill({ data: { prompt: text, imageUrl: src } })
+                .then((res) => setMade(res.url))
+                .catch(() => setMade(""))
+                .finally(() => setMaking(false));
+            }}
+            className="min-h-12 w-full rounded-full border border-gold px-5 text-gold"
+          >
+            {making ? "…" : lang === "pt" ? "Gerar imagem" : "Generate image"}
+          </button>
+        </div>
+      </div>
+      {made && <img src={made} alt="" className="max-h-96 w-full rounded-2xl object-contain" />}
       <button
         type="button"
         onClick={() => setImprove((v) => !v)}

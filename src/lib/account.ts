@@ -163,9 +163,10 @@ export const startClip = createServerFn({ method: "POST" })
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "grok-imagine-video-1.5",
-        prompt: `${data.prompt}. Keep the person's face and body the same unless the request explicitly asks to change them. High detail, steady camera.`,
+        prompt: `${data.prompt}. Keep the person's face and body the same unless the request explicitly asks to change them. High detail, steady camera, clean light.`,
         image: { url: data.imageUrl },
         duration: 8,
+        resolution: "1080p",
       }),
     });
     const body = (await res.json()) as { request_id?: string; error?: { message?: string } };
