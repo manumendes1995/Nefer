@@ -3,7 +3,7 @@ import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 
 const OWNER_EMAIL = "manumendes199514@gmail.com";
-const PRICE = 1599;
+const PRICE = 1999;
 
 type AccountRow = {
   user_id: string;
@@ -15,6 +15,9 @@ type AccountRow = {
   api_model: string;
 };
 
+const INCLUDED = 5;
+const TRIAL_VIDEOS = 1;
+const EXTRA_PRICE = "£3.99";
 const TRIAL_MS = 3 * 24 * 60 * 60 * 1000;
 
 async function isOwner(userId: string) {
@@ -29,7 +32,7 @@ async function loadAccount(userId: string) {
   return rows[0];
 }
 
-function accessOf(row: AccountRow, owner: boolean) {
+function accessOf(row: AccountRow, owner: boolean, videosLeft = INCLUDED) {
   const started = new Date(row.trial_started).getTime();
   const trialLeft = Math.max(0, TRIAL_MS - (Date.now() - started));
   const paid = owner || (row.plan === "active" && !!row.paid_until && new Date(row.paid_until).getTime() > Date.now());
@@ -38,18 +41,49 @@ function accessOf(row: AccountRow, owner: boolean) {
     paid,
     owner,
     trialHoursLeft: owner ? 0 : Math.ceil(trialLeft / 36e5),
-    price: "£15.99",
+    price: "£19.99",
+    extraPrice: EXTRA_PRICE,
+    videosLeft: owner ? 99 : videosLeft,
+    videosIncluded: owner ? 99 : paid ? INCLUDED : TRIAL_VIDEOS,
     hasKey: Boolean(row.api_key),
     apiBase: row.api_base,
     apiModel: row.api_model,
   };
 }
 
+async function videosLeftFor(userId: string, owner: boolean, paid: boolean, trial: boolean) {
+  if (owner) return 99;
+  const sql = await getSql();
+  const month = new Date().toISOString().slice(0, 7);
+  await sql`update atelier_accounts set videos_used = 0, video_month = ${month} where user_id = ${userId} and video_month is distinct from ${month}`;
+  const rows = await sql<{ videos_used: number; extra_videos: number }>`select videos_used, extra_videos from atelier_accounts where user_id = ${userId}`;
+  const used = rows[0]?.videos_used ?? 0;
+  const extra = rows[0]?.extra_videos ?? 0;
+  const included = paid ? INCLUDED : trial ? TRIAL_VIDEOS : 0;
+  return Math.max(0, included - used) + extra;
+}
+
+async function spendVideo(userId: string, owner: boolean, paid: boolean) {
+  if (owner) return;
+  const sql = await getSql();
+  const included = paid ? INCLUDED : TRIAL_VIDEOS;
+  const rows = await sql<{ videos_used: number }>`select videos_used from atelier_accounts where user_id = ${userId}`;
+  const used = rows[0]?.videos_used ?? 0;
+  if (used < included) {
+    await sql`update atelier_accounts set videos_used = videos_used + 1 where user_id = ${userId}`;
+    return;
+  }
+  await sql`update atelier_accounts set extra_videos = extra_videos - 1 where user_id = ${userId} and extra_videos > 0`;
+}
+
 export const getAccess = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     const row = await loadAccount(context.userId);
-    return accessOf(row, await isOwner(context.userId));
+    const owner = await isOwner(context.userId);
+    const base = accessOf(row, owner, 0);
+    const videosLeft = await videosLeftFor(context.userId, owner, base.paid, base.allowed && !base.paid);
+    return accessOf(row, owner, videosLeft);
   });
 
 export const saveApiKey = createServerFn({ method: "POST" })
@@ -154,8 +188,11 @@ export const startClip = createServerFn({ method: "POST" })
   })
   .handler(async ({ context, data }) => {
     const row = await loadAccount(context.userId);
-    const access = accessOf(row, await isOwner(context.userId));
+    const owner = await isOwner(context.userId);
+    const access = accessOf(row, owner);
     if (!access.allowed) return { id: "", error: "trial_ended" };
+    const left = await videosLeftFor(context.userId, owner, access.paid, access.allowed && !access.paid);
+    if (left < 1) return { id: "", error: "No videos left this month. An extra video is £3.99." };
     const key = process.env.XAI_API_KEY;
     if (!key) return { id: "", error: "Video render is not turned on for this host." };
     const res = await fetch("https://api.x.ai/v1/videos/generations", {
@@ -165,12 +202,13 @@ export const startClip = createServerFn({ method: "POST" })
         model: "grok-imagine-video-1.5",
         prompt: `${data.prompt}. Keep the person's face and body the same unless the request explicitly asks to change them. High detail, steady camera, clean light.`,
         image: { url: data.imageUrl },
-        duration: 8,
-        resolution: "1080p",
+        duration: 6,
+        resolution: "720p",
       }),
     });
     const body = (await res.json()) as { request_id?: string; error?: { message?: string } };
     if (!res.ok || !body.request_id) return { id: "", error: body.error?.message || "The video service refused the picture." };
+    await spendVideo(context.userId, owner, access.paid);
     return { id: body.request_id, error: "" };
   });
 

@@ -76,6 +76,8 @@
   animation: nefer-glow 3.6s ease-in-out infinite;
 }
 
-.nefer-drift {
-  animation: nefer-drift 7s ease-in-out infinite alternate;
+.nefer-frame {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(214, 161, 90, 0.16), transparent 55%),
+    #12110e;
 }

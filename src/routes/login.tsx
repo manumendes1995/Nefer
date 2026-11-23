@@ -79,9 +79,9 @@ function Login() {
           <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>English</button>
           <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>Português</button>
         </div>
-        <img src="/logo.jpg" alt="Nefer" className="h-28 w-28 rounded-2xl" />
+        <p className="font-display text-3xl text-gold">Nefer</p>
         <h1 className="mt-3 font-display text-3xl">{mode === "up" ? (pt ? "Criar conta" : "Create account") : pt ? "Entrar" : "Sign in"}</h1>
-        <p className="mt-2 text-sm text-muted">{mode === "up" ? (pt ? "A seguir validas o cartão. Não és cobrado durante 3 dias." : "Next you confirm your card. You are not charged for 3 days.") : pt ? "O teste que já começou continua. Não há outro." : "The trial already running is the one that counts. There is not a new one."}</p>
+        <p className="mt-2 text-sm text-muted">{mode === "up" ? (pt ? "3 dias, 1 vídeo. A seguir, £19.99 por mês com 5 vídeos. O cartão fica registado e não és cobrado no teste." : "3 days, 1 video. Then £19.99 a month with 5 videos. Your card is saved and you are not charged during the trial.") : pt ? "O teste que já começou continua. Não há outro." : "The trial already running is the one that counts. There is not a new one."}</p>
         {!authEnabled ? (
           <p className="mt-6 text-sm text-muted">{pt ? "O registo está desligado." : "Sign-in is off."}</p>
         ) : (

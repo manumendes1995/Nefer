@@ -160,32 +160,52 @@ function HomeGate({ lang, setLanguage }: { lang: Lang; setLanguage: (next: Lang)
   }, [lines.length]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-bg px-4 py-8 text-fg">
+    <main className="nefer-frame relative min-h-screen overflow-hidden px-4 py-8 text-fg">
       <div className="nefer-glow pointer-events-none absolute -left-16 top-10 h-56 w-56 rounded-full bg-gold/20 blur-3xl" />
       <div className="nefer-drift pointer-events-none absolute right-0 bottom-0 h-40 w-[140%] bg-gradient-to-r from-transparent via-gold/10 to-transparent" />
       <div className="relative mx-auto grid max-w-3xl gap-8">
         <div className="flex items-center justify-between gap-3">
           <NeferMark />
           <div className="flex rounded-full border border-line bg-surface p-1">
-            <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>English</button>
-            <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>Português</button>
+            <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>EN</button>
+            <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>PT</button>
           </div>
         </div>
-        <p key={line} className="nefer-in max-w-xl font-display text-4xl leading-tight md:text-6xl">
+        <p className="text-xs tracking-[0.22em] text-gold">{pt ? "ESTÚDIO" : "STUDIO"}</p>
+        <p key={line} className="nefer-in max-w-xl font-display text-4xl leading-[1.05] md:text-6xl">
           {lines[line]}
         </p>
-        <p className="max-w-xl text-muted">
+        <p className="max-w-xl text-base text-muted">
           {pt
-            ? "Na primeira página vês o que o estúdio faz. Toca num cartão. Depois crias a conta, confirmas o cartão, e entras. Três dias sem cobrança."
-            : "The first page shows what the studio does. Tap a card. Then you create the account, confirm the card, and you are in. Three days with no charge."}
+            ? "Carregas o produto, escreves o que queres e recebes o vídeo. A cara fica a tua."
+            : "Upload the product, write what you want, and the video comes back. The face stays yours."}
         </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(pt
+            ? [
+                ["£19.99", "por mês, 5 vídeos"],
+                ["3 dias", "1 vídeo para ver"],
+                ["£3.99", "cada vídeo a mais"],
+              ]
+            : [
+                ["£19.99", "a month, 5 videos"],
+                ["3 days", "1 video to try"],
+                ["£3.99", "each extra video"],
+              ]
+          ).map(([price, label]) => (
+            <div key={price} className="rounded-2xl border border-line bg-surface/80 p-4">
+              <p className="font-display text-2xl text-gold">{price}</p>
+              <p className="mt-1 text-sm text-muted">{label}</p>
+            </div>
+          ))}
+        </div>
         <div className="grid gap-3 md:grid-cols-3">
           {cards.map((card, i) => (
             <button
               key={card.name}
               type="button"
               onClick={() => setOpen(i)}
-              className={`nefer-in min-h-28 rounded-2xl border p-4 text-left transition ${open === i ? "border-gold bg-surface" : "border-line bg-bg"}`}
+              className={`nefer-in min-h-28 rounded-2xl border p-4 text-left transition ${open === i ? "border-gold bg-surface" : "border-line bg-ink/40"}`}
               style={{ animationDelay: `${i * 120}ms` }}
             >
               <p className="text-sm text-gold">{card.name}</p>
@@ -193,11 +213,11 @@ function HomeGate({ lang, setLanguage }: { lang: Lang; setLanguage: (next: Lang)
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <a href="/login" className="inline-flex min-h-11 items-center rounded-full bg-gold px-5 text-gold-ink">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <a href="/login" className="inline-flex min-h-12 items-center justify-center rounded-full bg-gold px-6 text-gold-ink">
             {pt ? "Começar teste grátis" : "Start free trial"}
           </a>
-          <a href="/login?mode=in" className="text-sm text-muted">
+          <a href="/login?mode=in" className="inline-flex min-h-12 items-center justify-center text-sm text-muted">
             {pt ? "Já tenho conta" : "I already have an account"}
           </a>
         </div>
@@ -214,7 +234,7 @@ function Studio() {
   const [platform, setPlatform] = useState<Platform>("reels");
   const [seconds, setSeconds] = useState<15 | 30 | 60>(30);
   const [note, setNote] = useState("");
-  const [access, setAccess] = useState<{ allowed: boolean; paid: boolean; owner?: boolean; trialHoursLeft: number; hasKey: boolean } | null>(null);
+  const [access, setAccess] = useState<{ allowed: boolean; paid: boolean; owner?: boolean; trialHoursLeft: number; hasKey: boolean; videosLeft?: number } | null>(null);
   const [modelText, setModelText] = useState("");
   const t = copy[lang];
 
@@ -252,7 +272,7 @@ function Studio() {
         <div className="w-full max-w-md">
           <NeferMark />
           <h1 className="mt-3 font-display text-3xl">{lang === "pt" ? "O teste de 3 dias acabou." : "The 3-day trial is over."}</h1>
-          <p className="mt-2 text-muted">£15.99 / {lang === "pt" ? "mês" : "month"}</p>
+          <p className="mt-2 text-muted">£19.99 / {lang === "pt" ? "mês · 5 vídeos" : "month · 5 videos"}</p>
           <button
             type="button"
             className="mt-6 min-h-11 rounded-full bg-gold px-5 text-gold-ink"
@@ -296,10 +316,12 @@ function Studio() {
                     ? "Incluído"
                     : "Included"
                   : access.paid
-                    ? "£15.99"
+                    ? lang === "pt"
+                      ? `£19.99 · ${access.videosLeft ?? 0} vídeos`
+                      : `£19.99 · ${access.videosLeft ?? 0} videos`
                     : lang === "pt"
-                      ? `${access.trialHoursLeft}h de teste`
-                      : `${access.trialHoursLeft}h trial`}
+                      ? `${access.trialHoursLeft}h · ${access.videosLeft ?? 0} vídeo`
+                      : `${access.trialHoursLeft}h · ${access.videosLeft ?? 0} video`}
               </p>
             )}
             <UserButton />
@@ -578,7 +600,14 @@ function VideoDesk({
       error: pt ? "Não foi possível começar." : "Could not start.",
     }));
     if (!started.id) {
-      setStatus(started.error || (pt ? "Não foi possível começar o vídeo." : "Could not start the video."));
+      const limit = (started.error || "").includes("No videos left");
+      setStatus(
+        limit
+          ? pt
+            ? "Já não há vídeos este mês. Mais um custa £3.99."
+            : "No videos left this month. An extra video is £3.99."
+          : started.error || (pt ? "Não foi possível começar o vídeo." : "Could not start the video."),
+      );
       setBusy(false);
       return;
     }
@@ -605,13 +634,13 @@ function VideoDesk({
     const objectUrl = URL.createObjectURL(source);
     const canvas = document.createElement("canvas");
     const draw = (width: number, height: number, el: CanvasImageSource) => {
-      const scale = Math.min(1, 1280 / Math.max(width, height));
+      const scale = Math.min(1, 960 / Math.max(width, height));
       canvas.width = Math.max(1, Math.round(width * scale));
       canvas.height = Math.max(1, Math.round(height * scale));
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("no canvas");
       ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL("image/jpeg", 0.86);
+      return canvas.toDataURL("image/jpeg", 0.8);
     };
     if (source.type.startsWith("video")) {
       const video = document.createElement("video");
