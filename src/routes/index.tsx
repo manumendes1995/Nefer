@@ -1,4 +1,4 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Aperture,
@@ -162,7 +162,24 @@ function Studio() {
   const viral = useMemo(() => viralPack(topic, lang, platform), [topic, lang, platform]);
 
   if (isPending) return <main className="grid min-h-screen place-items-center bg-bg text-muted">Nefer</main>;
-  if (!user) return <Navigate to="/login" />;
+  if (!user) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-bg px-4 text-fg">
+        <div className="w-full max-w-md">
+          <div className="mb-6 flex w-fit rounded-full border border-line bg-surface p-1">
+            <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>English</button>
+            <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>Português</button>
+          </div>
+          <p className="font-display text-4xl text-gold">Nefer</p>
+          <p className="mt-4 text-sm text-gold">{lang === "pt" ? "3 dias grátis" : "3-day free trial"}</p>
+          <h1 className="mt-2 font-display text-4xl">{lang === "pt" ? "Começa o teste. O cartão fica registado." : "Start the trial. Your card is saved."}</h1>
+          <p className="mt-3 text-muted">{lang === "pt" ? "Crias a conta e validas o cartão. Não és cobrado durante 3 dias. Se já tens conta, o teste que já começou continua. Não há outro." : "Create the account, then confirm your card. You are not charged for 3 days. If you already have an account, the trial already running is the one that counts. There is not a new one."}</p>
+          <a href="/login" className="mt-6 inline-flex min-h-11 items-center rounded-full bg-gold px-5 text-gold-ink">{lang === "pt" ? "Começar teste grátis" : "Start free trial"}</a>
+          <a href="/login?mode=in" className="mt-4 block text-sm text-muted">{lang === "pt" ? "Já tenho conta" : "I already have an account"}</a>
+        </div>
+      </main>
+    );
+  }
   if (access && !access.allowed) {
     return (
       <main className="grid min-h-screen place-items-center bg-bg px-4 text-fg">
@@ -174,7 +191,7 @@ function Studio() {
             type="button"
             className="mt-6 min-h-11 rounded-full bg-gold px-5 text-gold-ink"
             onClick={() => {
-              window.location.href = "https://buy.stripe.com/eVq4gAcTh1g45Db9v3eEo03";
+              window.location.href = "https://buy.stripe.com/8x214o7yXbUId5D8qZeEo05";
             }}
           >
             {lang === "pt" ? "Assinar" : "Subscribe"}

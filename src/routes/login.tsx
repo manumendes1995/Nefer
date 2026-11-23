@@ -16,6 +16,7 @@ function Login() {
   useEffect(() => {
     const saved = localStorage.getItem("atelier-lang");
     if (saved === "en" || saved === "pt") setLang(saved);
+    if (new URLSearchParams(window.location.search).get("mode") === "in") setMode("in");
   }, []);
   function setLanguage(next: "en" | "pt") {
     setLang(next);
@@ -48,6 +49,10 @@ function Login() {
         setError(result.error.message || (pt ? "Não foi possível entrar." : "Could not sign in."));
         return;
       }
+      if (mode === "up") {
+        window.location.href = `https://buy.stripe.com/00weVe7yXaQE2qZaz7eEo04?prefilled_email=${encodeURIComponent(mail)}`;
+        return;
+      }
       await navigate({ to: "/" });
     } catch (err) {
       setError(err instanceof Error ? err.message : pt ? "Não foi possível entrar." : "Could not sign in.");
@@ -65,7 +70,7 @@ function Login() {
         </div>
         <p className="font-display text-4xl text-gold">Nefer</p>
         <h1 className="mt-3 font-display text-3xl">{mode === "up" ? (pt ? "Criar conta" : "Create account") : pt ? "Entrar" : "Sign in"}</h1>
-        <p className="mt-2 text-sm text-muted">{pt ? "3 dias grátis. Depois £15.99 por mês." : "3 days free. Then £15.99 a month."}</p>
+        <p className="mt-2 text-sm text-muted">{mode === "up" ? (pt ? "A seguir validas o cartão. Não és cobrado durante 3 dias." : "Next you confirm your card. You are not charged for 3 days.") : pt ? "O teste que já começou continua. Não há outro." : "The trial already running is the one that counts. There is not a new one."}</p>
         {!authEnabled ? <p className="mt-6 text-sm text-muted">{pt ? "O registo está desligado." : "Sign-in is off."}</p> : (
           <form onSubmit={submit} className="mt-6 grid gap-3">
             {mode === "up" && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={pt ? "Nome" : "Name"} className="min-h-11 rounded-xl border border-line bg-surface px-3" />}
