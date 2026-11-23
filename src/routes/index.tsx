@@ -18,7 +18,7 @@ import {
 } from "@/lib/studio";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { UserButton } from "@/lib/auth/gates";
-import { clipStatus, confirmCheckout, getAccess, startClip, writeWithKey } from "@/lib/account";
+import { clipStatus, confirmCheckout, getAccess, makeCopy, makeStill, startClip, writeWithKey } from "@/lib/account";
 
 function packText(
   tool: Tool,
@@ -496,7 +496,92 @@ function VideoDesk({
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [clip, setClip] = useState("");
+  const [still, setStill] = useState("");
+  const [words, setWords] = useState(caption);
 
+  async function localAd(dataUrl: string, line: string) {
+    const img = new Image();
+    img.src = dataUrl;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = 768;
+    canvas.height = 1152;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return dataUrl;
+    ctx.fillStyle = "#12110e";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const scale = Math.min(canvas.width / img.width, 960 / img.height);
+    const w = img.width * scale;
+    const h = img.height * scale;
+    ctx.drawImage(img, (canvas.width - w) / 2, 36, w, h);
+    ctx.fillStyle = "#d6a15a";
+    ctx.font = "600 32px Georgia, serif";
+    ctx.fillText(line.slice(0, 42), 36, 1060);
+    return canvas.toDataURL("image/jpeg", 0.86);
+  }
+
+  async function run(mode: "photo" | "video" | "words") {
+    setBusy(true);
+    setStatus(pt ? "A preparar…" : "Preparing…");
+    if (!file && mode !== "words") {
+      setStatus(pt ? "Carrega primeiro a foto do produto." : "Upload the product photo first.");
+      setBusy(false);
+      return;
+    }
+    let imageUrl = "";
+    if (file && mode !== "words") {
+      try {
+        imageUrl = await pictureFromFile(file);
+      } catch {
+        setStatus(pt ? "Não consegui ler esse ficheiro." : "Could not read that file.");
+        setBusy(false);
+        return;
+      }
+    }
+    if (mode === "photo") {
+      const made = await makeStill({ data: { prompt: topic, imageUrl } }).catch(() => ({ url: "", error: "off" }));
+      const url = made.url || (await localAd(imageUrl, topic));
+      setStill(url);
+      setStatus(made.url ? (pt ? "Anúncio pronto." : "Ad is ready.") : pt ? "Anúncio pronto neste aparelho." : "Ad is ready on this device.");
+      setBusy(false);
+      return;
+    }
+    if (mode === "words") {
+      const made = await makeCopy({ data: { prompt: topic } }).catch(() => ({ text: "", error: "off" }));
+      setWords(made.text || caption);
+      setStatus(made.text ? (pt ? "Texto pronto." : "Copy is ready.") : pt ? "Texto pronto neste aparelho." : "Copy is ready on this device.");
+      setBusy(false);
+      return;
+    }
+    setClip("");
+    const started = await startClip({ data: { prompt: topic, imageUrl } }).catch(() => ({
+      id: "",
+      error: pt ? "Não foi possível começar." : "Could not start.",
+    }));
+    if (!started.id) {
+      setStatus(started.error || (pt ? "Não foi possível começar o vídeo." : "Could not start the video."));
+      setBusy(false);
+      return;
+    }
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 4000));
+      const row = await clipStatus({ data: started.id }).catch(() => ({ status: "failed", url: "", error: "" }));
+      if (row.url) {
+        setClip(row.url);
+        setStatus(pt ? "Vídeo pronto." : "Video is ready.");
+        setBusy(false);
+        return;
+      }
+      if (row.status === "failed" || row.status === "expired") {
+        setStatus(row.error || (pt ? "O vídeo falhou." : "The video failed."));
+        setBusy(false);
+        return;
+      }
+      setStatus(pt ? "A criar o vídeo…" : "Creating the video…");
+    }
+    setStatus(pt ? "Ainda está a criar. Tenta outra vez daqui a um minuto." : "Still creating. Try again in a minute.");
+    setBusy(false);
+  }
   async function pictureFromFile(source: File) {
     const objectUrl = URL.createObjectURL(source);
     const canvas = document.createElement("canvas");
@@ -531,60 +616,11 @@ function VideoDesk({
     return draw(img.naturalWidth, img.naturalHeight, img);
   }
 
-  async function create() {
-    setBusy(true);
-    setClip("");
-    if (!file) {
-      setStatus(pt ? "Carrega primeiro a foto ou o vídeo." : "Upload the photo or video first.");
-      setBusy(false);
-      return;
-    }
-    setStatus(pt ? "A preparar a imagem…" : "Preparing the picture…");
-    let imageUrl = "";
-    try {
-      imageUrl = await pictureFromFile(file);
-    } catch {
-      setStatus(pt ? "Não consegui ler esse ficheiro." : "Could not read that file.");
-      setBusy(false);
-      return;
-    }
-    const started = await startClip({ data: { prompt: topic, imageUrl } }).catch(() => ({
-      id: "",
-      error: pt ? "Não foi possível começar." : "Could not start.",
-    }));
-    if (!started.id) {
-      setStatus(started.error || (pt ? "Não foi possível começar." : "Could not start."));
-      setBusy(false);
-      return;
-    }
-    for (let i = 0; i < 20; i++) {
-      await new Promise((r) => setTimeout(r, 4000));
-      const row = await clipStatus({ data: started.id }).catch(() => ({ status: "failed", url: "", error: "" }));
-      if (row.url) {
-        setClip(row.url);
-        setStatus(pt ? "Vídeo pronto." : "Video is ready.");
-        setBusy(false);
-        return;
-      }
-      if (row.status === "failed" || row.status === "expired") {
-        setStatus(row.error || (pt ? "O vídeo falhou." : "The video failed."));
-        setBusy(false);
-        return;
-      }
-      setStatus(pt ? "A criar o vídeo…" : "Creating the video…");
-    }
-    setStatus(pt ? "Ainda está a criar. Tenta outra vez daqui a um minuto." : "Still creating. Try again in a minute.");
-    setBusy(false);
-  }
-
   return (
     <div className="grid gap-4">
       <form
         className="grid gap-4 rounded-2xl bg-surface p-4 md:p-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void create();
-        }}
+        onSubmit={(e) => e.preventDefault()}
       >
         <label className="grid gap-2 text-sm">
           {pt ? "O vídeo ou a foto do produto" : "The product video or photo"}
@@ -612,15 +648,29 @@ function VideoDesk({
             className="w-full resize-none rounded-xl border border-line bg-bg px-3 py-3 text-base text-fg outline-none"
           />
         </label>
-        <button type="submit" disabled={busy} className="min-h-11 w-fit rounded-full bg-gold px-5 text-gold-ink">
-          {busy ? "…" : pt ? "Criar vídeo" : "Create video"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={busy} onClick={() => void run("photo")} className="min-h-11 rounded-full bg-gold px-5 text-gold-ink">
+            {busy ? "…" : pt ? "Criar anúncio" : "Create ad"}
+          </button>
+          <button type="button" disabled={busy} onClick={() => void run("video")} className="min-h-11 rounded-full border border-gold px-5 text-gold">
+            {pt ? "Criar vídeo" : "Create video"}
+          </button>
+          <button type="button" disabled={busy} onClick={() => void run("words")} className="min-h-11 rounded-full border border-line px-5">
+            {pt ? "Criar texto" : "Create copy"}
+          </button>
+        </div>
         {status && <p className="text-sm text-gold">{status}</p>}
       </form>
       <div className="rounded-2xl border border-line p-4">
-        <p className="text-xs text-gold">{pt ? "Legenda" : "Caption"}</p>
-        <p className="mt-2 whitespace-pre-wrap text-sm">{caption}</p>
+        <p className="text-xs text-gold">{pt ? "Texto" : "Copy"}</p>
+        <p className="mt-2 whitespace-pre-wrap text-sm">{words}</p>
       </div>
+      {still && (
+        <a href={still} download="nefer-ad.jpg" className="block">
+          <img src={still} alt="" className="max-h-96 w-full rounded-2xl object-contain" />
+          <p className="mt-2 text-sm text-gold">{pt ? "Descarregar anúncio" : "Download ad"}</p>
+        </a>
+      )}
       {clip && (
         <video src={clip} controls className="max-h-96 w-full rounded-2xl bg-black" />
       )}

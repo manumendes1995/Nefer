@@ -187,3 +187,73 @@ export const clipStatus = createServerFn({ method: "POST" })
     if (!res.ok) return { status: "failed", url: "", error: body.error?.message || "Could not check the video." };
     return { status: body.status || "pending", url: body.video?.url || "", error: "" };
   });
+
+async function studioKey(userId: string) {
+  const row = await loadAccount(userId);
+  const access = accessOf(row, await isOwner(userId));
+  if (!access.allowed) return { key: "", error: "trial_ended" };
+  const key = process.env.XAI_API_KEY;
+  if (!key) return { key: "", error: "This render is not turned on for this host." };
+  return { key, error: "" };
+}
+
+export const makeStill = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { prompt: string; imageUrl: string }) => {
+    const prompt = input.prompt.trim().slice(0, 500);
+    const imageUrl = input.imageUrl.trim();
+    if (prompt.length < 3) throw new Error("Say what you want.");
+    if ((!imageUrl.startsWith("data:image/") && !imageUrl.startsWith("https://")) || imageUrl.length > 1_800_000) {
+      throw new Error("Use the uploaded picture.");
+    }
+    return { prompt, imageUrl };
+  })
+  .handler(async ({ context, data }) => {
+    const gate = await studioKey(context.userId);
+    if (!gate.key) return { url: "", error: gate.error };
+    const res = await fetch("https://api.x.ai/v1/images/edits", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${gate.key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "grok-imagine-image-2.0",
+        prompt: `Premium social ad still. ${data.prompt}. Keep the product and the person's face and body unchanged unless the request explicitly asks to change them. Clean light, high detail.`,
+        image: { url: data.imageUrl, type: "image_url" },
+      }),
+    });
+    const body = (await res.json()) as { url?: string; data?: { url?: string }[]; error?: { message?: string } };
+    const url = body.url || body.data?.[0]?.url || "";
+    if (!res.ok || !url) return { url: "", error: body.error?.message || "The image service refused the picture." };
+    return { url, error: "" };
+  });
+
+export const makeCopy = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { prompt: string }) => {
+    const prompt = input.prompt.trim().slice(0, 500);
+    if (prompt.length < 3) throw new Error("Say what you want.");
+    return { prompt };
+  })
+  .handler(async ({ context, data }) => {
+    const gate = await studioKey(context.userId);
+    if (!gate.key) return { text: "", error: gate.error };
+    const res = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${gate.key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "grok-4.5",
+        max_tokens: 400,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Write a social ad pack in the user's language: one hook, one caption, one call to action. Plain text. Do not say the face was changed.",
+          },
+          { role: "user", content: data.prompt },
+        ],
+      }),
+    });
+    const body = (await res.json()) as { choices?: { message?: { content?: string } }[]; error?: { message?: string } };
+    const text = body.choices?.[0]?.message?.content || "";
+    if (!res.ok || !text) return { text: "", error: body.error?.message || "The copy service refused." };
+    return { text, error: "" };
+  });
