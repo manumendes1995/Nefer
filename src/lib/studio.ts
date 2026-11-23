@@ -3,18 +3,18 @@ export type Platform = "tiktok" | "reels" | "shorts" | "youtube" | "linkedin";
 
 const openers = {
   en: [
-    "Stop scrolling. This is the part nobody films.",
-    "I tested this for 7 days. Here is the only thing that worked.",
-    "If your content dies in 2 seconds, the hook is the reason.",
-    "Everyone is doing this wrong. Watch the first frame.",
-    "The video that actually gets saved does one thing.",
+    "Want to stay on social media? The first line decides it.",
+    "Everything your videos need to get engagement starts here.",
+    "People leave in two seconds. This is the line that keeps them.",
+    "Engagement is not luck. It is the opening.",
+    "If the scroll wins, the hook was too quiet.",
   ],
   pt: [
-    "Para de passar. Isto é a parte que ninguém filma.",
-    "Testei isto 7 dias. Só uma coisa funcionou.",
-    "Se o teu conteúdo morre aos 2 segundos, o hook é a razão.",
-    "Toda a gente faz isto mal. Olha para o primeiro frame.",
-    "O vídeo que as pessoas guardam faz uma coisa só.",
+    "Queres ficar nas redes sociais? A primeira frase decide.",
+    "Tudo o que os teus vídeos precisam para ter engajamento começa aqui.",
+    "As pessoas saem em dois segundos. Esta é a frase que as segura.",
+    "Engajamento não é sorte. É a abertura.",
+    "Se o dedo passa, o gancho foi demasiado fraco.",
   ],
 };
 
@@ -32,24 +32,24 @@ export function makeHooks(topic: string, lang: Lang, platform: Platform) {
   const patterns =
     lang === "pt"
       ? [
-          `Ninguém te diz isto sobre ${base}.`,
-          `3 segundos. É tudo o que tens para vender ${base}.`,
-          `Eu apaguei o meu roteiro de ${base}. Ficou melhor.`,
-          `O erro que mata ${base} no ${label(platform, lang)}.`,
-          `Faz isto antes de publicar ${base}.`,
-          `A frase que faz as pessoas ficar até ao fim: ${base}.`,
-          `Se vendes ${base}, começa o vídeo assim.`,
-          `Para. Não publiques ${base} sem este gancho.`,
+          `Queres ficar nas redes com ${base}? Começa assim.`,
+          `Tudo o que ${base} precisa para ter engajamento.`,
+          `As pessoas passam ${base}. Esta frase fá-las parar.`,
+          `O teu vídeo de ${base} morre sem este gancho.`,
+          `Queres comentários em ${base}? Diz isto primeiro.`,
+          `Engajamento em ${base} cabe numa frase.`,
+          `Se queres que ${base} fique no ecrã, abre com isto.`,
+          `Para de publicar ${base} sem uma razão para ficar.`,
         ]
       : [
-          `Nobody tells you this about ${base}.`,
-          `You have 3 seconds to sell ${base}.`,
-          `I deleted my script about ${base}. It got better.`,
-          `The mistake that kills ${base} on ${label(platform, lang)}.`,
-          `Do this before you post ${base}.`,
-          `The line that holds people: ${base}.`,
-          `If you sell ${base}, open the video like this.`,
-          `Stop. Do not publish ${base} without this hook.`,
+          `Want to stay on socials with ${base}? Start like this.`,
+          `Everything ${base} needs to get engagement.`,
+          `People scroll past ${base}. This line stops them.`,
+          `Your ${base} video dies without this hook.`,
+          `Want comments on ${base}? Say this first.`,
+          `Engagement for ${base} fits in one line.`,
+          `If you want ${base} to stay on screen, open with this.`,
+          `Stop posting ${base} with nothing to hold them.`,
         ];
   return patterns.map((line, i) => ({
     line,

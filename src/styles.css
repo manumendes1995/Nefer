@@ -37,3 +37,45 @@
     transition: none !important;
   }
 }
+
+@keyframes nefer-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nefer-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes nefer-drift {
+  from {
+    transform: translateX(-8%);
+  }
+  to {
+    transform: translateX(8%);
+  }
+}
+
+.nefer-in {
+  animation: nefer-in 0.7s ease both;
+}
+
+.nefer-glow {
+  animation: nefer-glow 3.6s ease-in-out infinite;
+}
+
+.nefer-drift {
+  animation: nefer-drift 7s ease-in-out infinite alternate;
+}

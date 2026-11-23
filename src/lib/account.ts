@@ -4,7 +4,6 @@ import { authMiddleware } from "@/lib/auth/middleware";
 
 const OWNER_EMAIL = "manumendes199514@gmail.com";
 const PRICE = 1599;
-const TRIAL_MS = 3 * 24 * 60 * 60 * 1000;
 
 type AccountRow = {
   user_id: string;
@@ -16,12 +15,13 @@ type AccountRow = {
   api_model: string;
 };
 
+const TRIAL_MS = 3 * 24 * 60 * 60 * 1000;
+
 async function isOwner(userId: string) {
   const sql = await getSql();
   const rows = await sql<{ email: string }>`select email from "user" where id = ${userId}`;
   return (rows[0]?.email || "").toLowerCase() === OWNER_EMAIL;
 }
-
 async function loadAccount(userId: string) {
   const sql = await getSql();
   await sql`insert into atelier_accounts (user_id) values (${userId}) on conflict (user_id) do nothing`;
@@ -36,6 +36,7 @@ function accessOf(row: AccountRow, owner: boolean) {
   return {
     allowed: owner || paid || trialLeft > 0,
     paid,
+    owner,
     trialHoursLeft: owner ? 0 : Math.ceil(trialLeft / 36e5),
     price: "£15.99",
     hasKey: Boolean(row.api_key),
@@ -84,7 +85,7 @@ export const startCheckout = createServerFn({ method: "POST" })
     params.set("line_items[0][price_data][currency]", "gbp");
     params.set("line_items[0][price_data][unit_amount]", String(PRICE));
     params.set("line_items[0][price_data][recurring][interval]", "month");
-    params.set("line_items[0][price_data][product_data][name]", "Nefer");
+    params.set("line_items[0][price_data][product_data][name]", "Atelier");
     const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
@@ -127,7 +128,11 @@ export const writeWithKey = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model: row.api_model,
         messages: [
-          { role: "system", content: "You write premium short-form and long-form content. Never invent that a face was altered. Reply in the user's language. Plain text, no markdown fences." },
+          {
+            role: "system",
+            content:
+              "You write premium short-form and long-form content. Never invent that a face was altered. Reply in the user's language. Plain text, no markdown fences.",
+          },
           { role: "user", content: data.prompt },
         ],
       }),
@@ -135,4 +140,50 @@ export const writeWithKey = createServerFn({ method: "POST" })
     if (!res.ok) return { text: "", error: "The model refused the key or the base URL." };
     const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     return { text: body.choices?.[0]?.message?.content || "", error: "" };
+  });
+
+export const startClip = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { prompt: string; imageUrl: string }) => {
+    const prompt = input.prompt.trim().slice(0, 500);
+    const imageUrl = input.imageUrl.trim();
+    if (prompt.length < 3) throw new Error("Say what you want.");
+    const ok = imageUrl.startsWith("https://") || imageUrl.startsWith("data:image/");
+    if (!ok || imageUrl.length > 1_800_000) throw new Error("Use the uploaded picture.");
+    return { prompt, imageUrl };
+  })
+  .handler(async ({ context, data }) => {
+    const row = await loadAccount(context.userId);
+    const access = accessOf(row, await isOwner(context.userId));
+    if (!access.allowed) return { id: "", error: "trial_ended" };
+    const key = process.env.XAI_API_KEY;
+    if (!key) return { id: "", error: "Video render is not turned on for this host." };
+    const res = await fetch("https://api.x.ai/v1/videos/generations", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "grok-imagine-video-1.5",
+        prompt: `${data.prompt}. Keep the person's face and body the same unless the request explicitly asks to change them. High detail, steady camera.`,
+        image: { url: data.imageUrl },
+        duration: 8,
+      }),
+    });
+    const body = (await res.json()) as { request_id?: string; error?: { message?: string } };
+    if (!res.ok || !body.request_id) return { id: "", error: body.error?.message || "The video service refused the picture." };
+    return { id: body.request_id, error: "" };
+  });
+
+export const clipStatus = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((id: string) => {
+    if (!/^[\w-]{8,}$/.test(id)) throw new Error("Bad id.");
+    return id;
+  })
+  .handler(async ({ data: id }) => {
+    const key = process.env.XAI_API_KEY;
+    if (!key) return { status: "failed", url: "", error: "Video render is not turned on for this host." };
+    const res = await fetch(`https://api.x.ai/v1/videos/${id}`, { headers: { Authorization: `Bearer ${key}` } });
+    const body = (await res.json()) as { status?: string; video?: { url?: string }; error?: { message?: string } };
+    if (!res.ok) return { status: "failed", url: "", error: body.error?.message || "Could not check the video." };
+    return { status: body.status || "pending", url: body.video?.url || "", error: "" };
   });

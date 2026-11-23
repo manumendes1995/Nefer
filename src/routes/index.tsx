@@ -3,11 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Aperture,
   Clapperboard,
-  Flame,
   ImagePlus,
-  Languages,
   Sparkles,
-  Timer,
   Type,
 } from "lucide-react";
 import {
@@ -21,7 +18,7 @@ import {
 } from "@/lib/studio";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { UserButton } from "@/lib/auth/gates";
-import { confirmCheckout, getAccess, saveApiKey, startCheckout, writeWithKey } from "@/lib/account";
+import { clipStatus, confirmCheckout, getAccess, startClip, writeWithKey } from "@/lib/account";
 
 function packText(
   tool: Tool,
@@ -38,13 +35,13 @@ function packText(
 
 export const Route = createFileRoute("/")({ component: Studio });
 
-type Tool = "hooks" | "short" | "long" | "viral" | "all" | "photo";
+type Tool = "video" | "photo" | "hooks" | "short" | "long" | "viral" | "all";
 
 const copy = {
   en: {
     kicker: "Premium studio",
-    title: "Hooks, films, and pictures that hold attention.",
-    sub: "Write the open. Cut the short. Structure the long. Grade the still.",
+    title: "Make the film. Then the still.",
+    sub: "Bring a product clip or a picture. Say what you want. Hooks only if you ask.",
     topic: "What is this about?",
     placeholder: "A skincare routine that actually fits a workday",
     platform: "Platform",
@@ -53,6 +50,7 @@ const copy = {
     copy: "Copy",
     copied: "Copied",
     all: "Full pack",
+    video: "Video",
     hooks: "Hooks",
     short: "Short film",
     long: "Long film",
@@ -76,8 +74,8 @@ const copy = {
   },
   pt: {
     kicker: "Estúdio premium",
-    title: "Hooks, filmes e fotos que seguram a atenção.",
-    sub: "Escreve a abertura. Corta o curto. Estrutura o longo. Trata a foto.",
+    title: "Faz o vídeo. Depois a foto.",
+    sub: "Traz um vídeo do produto ou uma foto. Diz o que queres. Os hooks só se pedires.",
     topic: "Sobre o quê?",
     placeholder: "Uma rotina de pele que cabe num dia de trabalho",
     platform: "Plataforma",
@@ -86,6 +84,7 @@ const copy = {
     copy: "Copiar",
     copied: "Copiado",
     all: "Pacote completo",
+    video: "Vídeo",
     hooks: "Hooks",
     short: "Vídeo curto",
     long: "Vídeo longo",
@@ -110,29 +109,101 @@ const copy = {
 };
 
 const tools: { id: Tool; icon: typeof Type }[] = [
-  { id: "hooks", icon: Type },
-  { id: "short", icon: Timer },
-  { id: "long", icon: Clapperboard },
-  { id: "viral", icon: Flame },
-  { id: "all", icon: Sparkles },
+  { id: "video", icon: Clapperboard },
   { id: "photo", icon: Aperture },
+  { id: "hooks", icon: Type },
 ];
 
 const backdrops = ["#1a140c", "#d6a15a", "#2c3a34", "#6e2e2a", "#e7e1d6", "#1d2a44"];
 
+function HomeGate({ lang, setLanguage }: { lang: Lang; setLanguage: (next: Lang) => void }) {
+  const pt = lang === "pt";
+  const lines = pt
+    ? [
+        "Queres ficar nas redes sociais?",
+        "Tudo o que os teus vídeos precisam para ter engajamento.",
+        "A primeira frase decide se ficam ou se passam.",
+      ]
+    : [
+        "Want to stay on social media?",
+        "Everything your videos need to get engagement.",
+        "The first line decides if they stay or scroll.",
+      ];
+  const cards = pt
+    ? [
+        { name: "Vídeo", text: "Carregas o produto, dizes o que queres, e sai um clipe com legenda." },
+        { name: "Foto", text: "Luz de hotel, parede limpa, quarto suave. A cara e o corpo ficam os teus." },
+        { name: "Hooks", text: "Frases para as pessoas ficarem. Só se quiseres mais engajamento." },
+      ]
+    : [
+        { name: "Video", text: "Upload the product, say what you want, and a clip comes back with a caption." },
+        { name: "Photo", text: "Hotel light, a clean wall, a soft room. The face and body stay yours." },
+        { name: "Hooks", text: "Lines that make people stay. Only if you want more engagement." },
+      ];
+  const [line, setLine] = useState(0);
+  const [open, setOpen] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setLine((n) => (n + 1) % lines.length), 3200);
+    return () => window.clearInterval(id);
+  }, [lines.length]);
+
+  return (
+    <main className="relative min-h-screen overflow-hidden bg-bg px-4 py-8 text-fg">
+      <div className="nefer-glow pointer-events-none absolute -left-16 top-10 h-56 w-56 rounded-full bg-gold/20 blur-3xl" />
+      <div className="nefer-drift pointer-events-none absolute right-0 bottom-0 h-40 w-[140%] bg-gradient-to-r from-transparent via-gold/10 to-transparent" />
+      <div className="relative mx-auto grid max-w-3xl gap-8">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-display text-2xl text-gold">Nefer</p>
+          <div className="flex rounded-full border border-line bg-surface p-1">
+            <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>English</button>
+            <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>Português</button>
+          </div>
+        </div>
+        <p key={line} className="nefer-in max-w-xl font-display text-4xl leading-tight md:text-6xl">
+          {lines[line]}
+        </p>
+        <p className="max-w-xl text-muted">
+          {pt
+            ? "Na primeira página vês o que o estúdio faz. Toca num cartão. Depois crias a conta, confirmas o cartão, e entras. Três dias sem cobrança."
+            : "The first page shows what the studio does. Tap a card. Then you create the account, confirm the card, and you are in. Three days with no charge."}
+        </p>
+        <div className="grid gap-3 md:grid-cols-3">
+          {cards.map((card, i) => (
+            <button
+              key={card.name}
+              type="button"
+              onClick={() => setOpen(i)}
+              className={`nefer-in min-h-28 rounded-2xl border p-4 text-left transition ${open === i ? "border-gold bg-surface" : "border-line bg-bg"}`}
+              style={{ animationDelay: `${i * 120}ms` }}
+            >
+              <p className="text-sm text-gold">{card.name}</p>
+              <p className={`mt-2 text-sm ${open === i ? "text-fg" : "text-muted"}`}>{card.text}</p>
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-4">
+          <a href="/login" className="inline-flex min-h-11 items-center rounded-full bg-gold px-5 text-gold-ink">
+            {pt ? "Começar teste grátis" : "Start free trial"}
+          </a>
+          <a href="/login?mode=in" className="text-sm text-muted">
+            {pt ? "Já tenho conta" : "I already have an account"}
+          </a>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 function Studio() {
   const { user, isPending } = useCurrentUserState();
   const [lang, setLang] = useState<Lang>("en");
-  const [tool, setTool] = useState<Tool>("hooks");
-  const [topic, setTopic] = useState("A skin routine for people who work all day");
+  const [tool, setTool] = useState<Tool>("video");
+  const [topic, setTopic] = useState("Slow turn, clean wall, hold the flowers, warm hotel light");
   const [platform, setPlatform] = useState<Platform>("reels");
   const [seconds, setSeconds] = useState<15 | 30 | 60>(30);
   const [note, setNote] = useState("");
-  const [access, setAccess] = useState<{ allowed: boolean; paid: boolean; trialHoursLeft: number; hasKey: boolean } | null>(null);
+  const [access, setAccess] = useState<{ allowed: boolean; paid: boolean; owner?: boolean; trialHoursLeft: number; hasKey: boolean } | null>(null);
   const [modelText, setModelText] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [apiBase, setApiBase] = useState("https://api.x.ai/v1");
-  const [apiModel, setApiModel] = useState("grok-3");
   const t = copy[lang];
 
   useEffect(() => {
@@ -162,29 +233,12 @@ function Studio() {
   const viral = useMemo(() => viralPack(topic, lang, platform), [topic, lang, platform]);
 
   if (isPending) return <main className="grid min-h-screen place-items-center bg-bg text-muted">Nefer</main>;
-  if (!user) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-bg px-4 text-fg">
-        <div className="w-full max-w-md">
-          <div className="mb-6 flex w-fit rounded-full border border-line bg-surface p-1">
-            <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>English</button>
-            <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>Português</button>
-          </div>
-          <p className="font-display text-4xl text-gold">Nefer</p>
-          <p className="mt-4 text-sm text-gold">{lang === "pt" ? "3 dias grátis" : "3-day free trial"}</p>
-          <h1 className="mt-2 font-display text-4xl">{lang === "pt" ? "Começa o teste. O cartão fica registado." : "Start the trial. Your card is saved."}</h1>
-          <p className="mt-3 text-muted">{lang === "pt" ? "Crias a conta e validas o cartão. Não és cobrado durante 3 dias. Se já tens conta, o teste que já começou continua. Não há outro." : "Create the account, then confirm your card. You are not charged for 3 days. If you already have an account, the trial already running is the one that counts. There is not a new one."}</p>
-          <a href="/login" className="mt-6 inline-flex min-h-11 items-center rounded-full bg-gold px-5 text-gold-ink">{lang === "pt" ? "Começar teste grátis" : "Start free trial"}</a>
-          <a href="/login?mode=in" className="mt-4 block text-sm text-muted">{lang === "pt" ? "Já tenho conta" : "I already have an account"}</a>
-        </div>
-      </main>
-    );
-  }
+  if (!user) return <HomeGate lang={lang} setLanguage={setLanguage} />;
   if (access && !access.allowed) {
     return (
       <main className="grid min-h-screen place-items-center bg-bg px-4 text-fg">
         <div className="w-full max-w-md">
-          <p className="font-display text-4xl text-gold">Nefer</p>
+          <img src="/logo.jpg" alt="Nefer" className="h-20 w-20 rounded-xl" />
           <h1 className="mt-3 font-display text-3xl">{lang === "pt" ? "O teste de 3 dias acabou." : "The 3-day trial is over."}</h1>
           <p className="mt-2 text-muted">£15.99 / {lang === "pt" ? "mês" : "month"}</p>
           <button
@@ -207,18 +261,34 @@ function Studio() {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-bg pb-24 text-fg md:pb-0">
+      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-bg/95 px-4 py-3 backdrop-blur md:px-8">
+        <div className="flex items-center gap-3">
+          <img src="/logo.jpg" alt="Nefer" className="h-10 w-10 rounded-lg" />
+          <p className="font-display text-xl text-gold">Nefer</p>
+        </div>
+        <div className="flex shrink-0 rounded-full border border-line bg-surface p-1" aria-label="Language">
+          <button type="button" onClick={() => setLanguage("en")} className={`min-h-10 rounded-full px-3 text-sm md:px-4 ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>
+            English
+          </button>
+          <button type="button" onClick={() => setLanguage("pt")} className={`min-h-10 rounded-full px-3 text-sm md:px-4 ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>
+            Português
+          </button>
+        </div>
+      </div>
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 md:grid-cols-[220px_1fr] md:px-8 md:py-10">
         <aside className="flex flex-col gap-6">
           <div>
-            <p className="font-display text-2xl text-gold">Nefer</p>
-            <p className="mt-1 text-sm text-muted">{t.kicker}</p>
             {access && (
-              <p className="mt-2 text-xs text-gold">
-                {access.paid
-                  ? "£15.99"
-                  : lang === "pt"
-                    ? `${access.trialHoursLeft}h de teste`
-                    : `${access.trialHoursLeft}h trial`}
+              <p className="text-xs text-gold">
+                {access.owner
+                  ? lang === "pt"
+                    ? "Incluído"
+                    : "Included"
+                  : access.paid
+                    ? "£15.99"
+                    : lang === "pt"
+                      ? `${access.trialHoursLeft}h de teste`
+                      : `${access.trialHoursLeft}h trial`}
               </p>
             )}
             <UserButton />
@@ -241,46 +311,18 @@ function Studio() {
               );
             })}
           </nav>
-
         </aside>
 
         <section className="flex flex-col gap-6">
-          <header className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="font-display text-4xl leading-tight md:text-5xl">{t.title}</h1>
-              <p className="mt-3 max-w-xl text-muted">{t.sub}</p>
-            </div>
-            <div className="flex shrink-0 rounded-full border border-line bg-surface p-1">
-              <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>English</button>
-              <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>Português</button>
-            </div>
+          <header>
+            <h1 className="font-display text-3xl leading-tight md:text-4xl">{t.title}</h1>
+            <p className="mt-2 max-w-xl text-muted">{t.sub}</p>
           </header>
-          <div className="grid gap-2 rounded-2xl border border-line p-4 text-sm">
-            <p className="text-muted">
-              {lang === "pt"
-                ? "Chave opcional. Sem ela, o estúdio escreve aqui. Com ela, pede ao modelo. A foto nunca passa pela chave."
-                : "Optional key. Without it, the studio writes here. With it, the model writes. Photos never use the key."}
-            </p>
-            <input
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="API key"
-              type="password"
-              className="min-h-11 rounded-xl border border-line bg-bg px-3"
-            />
-            <input value={apiBase} onChange={(e) => setApiBase(e.target.value)} className="min-h-11 rounded-xl border border-line bg-bg px-3" />
-            <input value={apiModel} onChange={(e) => setApiModel(e.target.value)} className="min-h-11 rounded-xl border border-line bg-bg px-3" />
-            <button
-              type="button"
-              className="min-h-11 w-fit rounded-full bg-surface px-4"
-              onClick={() => saveApiKey({ data: { apiKey, apiBase, apiModel } }).then(() => setNote(lang === "pt" ? "Chave guardada" : "Key saved"))}
-            >
-              {lang === "pt" ? "Guardar chave" : "Save key"}
-            </button>
-          </div>
           {modelText && <pre className="whitespace-pre-wrap rounded-2xl bg-surface p-4 text-sm">{modelText}</pre>}
 
-          {tool !== "photo" ? (
+          {tool === "video" ? (
+            <VideoDesk lang={lang} topic={topic} setTopic={setTopic} caption={short.caption} />
+          ) : tool !== "photo" ? (
             <form
               className="grid gap-4 rounded-2xl bg-surface p-4 md:p-5"
               onSubmit={(e) => e.preventDefault()}
@@ -339,19 +381,21 @@ function Studio() {
                         /* keep the text on screen */
                       }
                       setNote(t.copied);
+                      document.getElementById("result")?.scrollIntoView({ behavior: "smooth", block: "start" });
                       return;
                     }
-                    setModelText("");
+                    setModelText(local);
                     try {
                       await navigator.clipboard.writeText(local);
                       setNote(t.copied);
                     } catch {
                       setNote(local.slice(0, 80));
                     }
+                    document.getElementById("result")?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
                 >
                   <Sparkles className="h-4 w-4" />
-                  {note || t.copy}
+                  {t.make}
                 </button>
               </div>
             </form>
@@ -359,56 +403,58 @@ function Studio() {
             <PhotoLab lang={lang} />
           )}
 
-          {(tool === "hooks" || tool === "all") && (
-            <ul className="grid gap-3">
-              {hooks.map((h) => (
-                <li key={h.line} className="rounded-2xl border border-line bg-surface p-4">
-                  <p className="text-lg">{h.line}</p>
-                  <p className="mt-2 text-sm text-muted">{h.why}</p>
-                  <p className="mt-3 text-xs tracking-wide text-gold">
-                    {h.score} {t.score}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {(tool === "short" || tool === "all") && short && (
-            <div className="grid gap-3">
-              <p className="rounded-2xl bg-gold px-4 py-4 text-lg text-gold-ink">{short.hook}</p>
-              {short.beats.map((b) => (
-                <article key={b.t} className="rounded-2xl border border-line p-4">
-                  <p className="text-xs text-gold">{b.t}</p>
-                  <p className="mt-1">{b.line}</p>
-                  <p className="mt-1 text-sm text-muted">{b.shot}</p>
-                </article>
-              ))}
-              <pre className="whitespace-pre-wrap rounded-2xl bg-surface p-4 text-sm">{short.caption}</pre>
-            </div>
-          )}
-
-          {(tool === "long" || tool === "all") && (
-            <ol className="grid gap-3">
-              {long.map((c) => (
-                <li key={c.title} className="rounded-2xl border border-line p-4">
-                  <p className="text-xs text-gold">{c.time}</p>
-                  <h2 className="font-display text-2xl">{c.title}</h2>
-                  <p className="mt-2 text-muted">{c.body}</p>
-                </li>
-              ))}
-            </ol>
-          )}
-
-          {(tool === "viral" || tool === "all") && viral && (
-            <div className="grid gap-3">
-              {viral.hooks.map((h) => (
-                <p key={h.line} className="rounded-2xl bg-surface p-4 text-lg">
-                  {h.line}
-                </p>
-              ))}
-              <p className="rounded-2xl border border-gold px-4 py-6 text-center font-display text-3xl">{viral.thumbnail}</p>
-              <pre className="whitespace-pre-wrap rounded-2xl bg-surface p-4 text-sm">{viral.caption}</pre>
-              <p className="text-sm text-gold">{viral.tags.join("  ")}</p>
+          {tool !== "photo" && tool !== "video" && (
+            <div id="result" className="grid gap-3">
+              <p className="text-sm text-gold">{lang === "pt" ? "Resultado" : "Result"}</p>
+              {(tool === "hooks" || tool === "all") && (
+                <ul className="grid gap-3">
+                  {hooks.map((h) => (
+                    <li key={h.line} className="rounded-2xl border border-line bg-surface p-4">
+                      <p className="text-lg">{h.line}</p>
+                      <p className="mt-2 text-sm text-muted">{h.why}</p>
+                      <p className="mt-3 text-xs tracking-wide text-gold">
+                        {h.score} {t.score}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {(tool === "short" || tool === "all") && short && (
+                <div className="grid gap-3">
+                  <p className="rounded-2xl bg-gold px-4 py-4 text-lg text-gold-ink">{short.hook}</p>
+                  {short.beats.map((b) => (
+                    <article key={b.t} className="rounded-2xl border border-line p-4">
+                      <p className="text-xs text-gold">{b.t}</p>
+                      <p className="mt-1">{b.line}</p>
+                      <p className="mt-1 text-sm text-muted">{b.shot}</p>
+                    </article>
+                  ))}
+                  <pre className="whitespace-pre-wrap rounded-2xl bg-surface p-4 text-sm">{short.caption}</pre>
+                </div>
+              )}
+              {(tool === "long" || tool === "all") && (
+                <ol className="grid gap-3">
+                  {long.map((c) => (
+                    <li key={c.title} className="rounded-2xl border border-line p-4">
+                      <p className="text-xs text-gold">{c.time}</p>
+                      <h2 className="font-display text-2xl">{c.title}</h2>
+                      <p className="mt-2 text-muted">{c.body}</p>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {(tool === "viral" || tool === "all") && viral && (
+                <div className="grid gap-3">
+                  {viral.hooks.map((h) => (
+                    <p key={h.line} className="rounded-2xl bg-surface p-4 text-lg">
+                      {h.line}
+                    </p>
+                  ))}
+                  <p className="rounded-2xl border border-gold px-4 py-6 text-center font-display text-3xl">{viral.thumbnail}</p>
+                  <pre className="whitespace-pre-wrap rounded-2xl bg-surface p-4 text-sm">{viral.caption}</pre>
+                  <p className="text-sm text-gold">{viral.tags.join("  ")}</p>
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -432,14 +478,169 @@ function Studio() {
   );
 }
 
+function VideoDesk({
+  lang,
+  topic,
+  setTopic,
+  caption,
+}: {
+  lang: Lang;
+  topic: string;
+  setTopic: (value: string) => void;
+  caption: string;
+}) {
+  const pt = lang === "pt";
+  const [file, setFile] = useState<File | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [kind, setKind] = useState<"video" | "image" | "">("");
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
+  const [clip, setClip] = useState("");
+
+  async function pictureFromFile(source: File) {
+    const objectUrl = URL.createObjectURL(source);
+    const canvas = document.createElement("canvas");
+    const draw = (width: number, height: number, el: CanvasImageSource) => {
+      const scale = Math.min(1, 768 / Math.max(width, height));
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("no canvas");
+      ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.72);
+    };
+    if (source.type.startsWith("video")) {
+      const video = document.createElement("video");
+      video.src = objectUrl;
+      video.muted = true;
+      await new Promise<void>((resolve, reject) => {
+        video.onloadeddata = () => resolve();
+        video.onerror = () => reject(new Error("bad video"));
+      });
+      video.currentTime = Math.min(0.4, video.duration || 0);
+      await new Promise<void>((resolve) => {
+        const done = () => resolve();
+        video.onseeked = done;
+        window.setTimeout(done, 800);
+      });
+      return draw(video.videoWidth, video.videoHeight, video);
+    }
+    const img = new Image();
+    img.src = objectUrl;
+    await img.decode();
+    return draw(img.naturalWidth, img.naturalHeight, img);
+  }
+
+  async function create() {
+    setBusy(true);
+    setClip("");
+    if (!file) {
+      setStatus(pt ? "Carrega primeiro a foto ou o vídeo." : "Upload the photo or video first.");
+      setBusy(false);
+      return;
+    }
+    setStatus(pt ? "A preparar a imagem…" : "Preparing the picture…");
+    let imageUrl = "";
+    try {
+      imageUrl = await pictureFromFile(file);
+    } catch {
+      setStatus(pt ? "Não consegui ler esse ficheiro." : "Could not read that file.");
+      setBusy(false);
+      return;
+    }
+    const started = await startClip({ data: { prompt: topic, imageUrl } }).catch(() => ({
+      id: "",
+      error: pt ? "Não foi possível começar." : "Could not start.",
+    }));
+    if (!started.id) {
+      setStatus(started.error || (pt ? "Não foi possível começar." : "Could not start."));
+      setBusy(false);
+      return;
+    }
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 4000));
+      const row = await clipStatus({ data: started.id }).catch(() => ({ status: "failed", url: "", error: "" }));
+      if (row.url) {
+        setClip(row.url);
+        setStatus(pt ? "Vídeo pronto." : "Video is ready.");
+        setBusy(false);
+        return;
+      }
+      if (row.status === "failed" || row.status === "expired") {
+        setStatus(row.error || (pt ? "O vídeo falhou." : "The video failed."));
+        setBusy(false);
+        return;
+      }
+      setStatus(pt ? "A criar o vídeo…" : "Creating the video…");
+    }
+    setStatus(pt ? "Ainda está a criar. Tenta outra vez daqui a um minuto." : "Still creating. Try again in a minute.");
+    setBusy(false);
+  }
+
+  return (
+    <div className="grid gap-4">
+      <form
+        className="grid gap-4 rounded-2xl bg-surface p-4 md:p-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void create();
+        }}
+      >
+        <label className="grid gap-2 text-sm">
+          {pt ? "O vídeo ou a foto do produto" : "The product video or photo"}
+          <input
+            type="file"
+            accept="video/*,image/*"
+            className="text-sm"
+            onChange={(e) => {
+              const next = e.target.files?.[0];
+              if (!next) return;
+              setFile(next);
+              setKind(next.type.startsWith("video") ? "video" : "image");
+              setFileUrl(URL.createObjectURL(next));
+            }}
+          />
+        </label>
+        {fileUrl && kind === "video" && <video src={fileUrl} controls className="max-h-80 w-full rounded-2xl bg-black" />}
+        {fileUrl && kind === "image" && <img src={fileUrl} alt="" className="max-h-80 w-full rounded-2xl object-contain" />}
+        <label className="grid gap-2 text-sm">
+          {pt ? "Quero isto" : "I want this"}
+          <textarea
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            rows={3}
+            className="w-full resize-none rounded-xl border border-line bg-bg px-3 py-3 text-base text-fg outline-none"
+          />
+        </label>
+        <button type="submit" disabled={busy} className="min-h-11 w-fit rounded-full bg-gold px-5 text-gold-ink">
+          {busy ? "…" : pt ? "Criar vídeo" : "Create video"}
+        </button>
+        {status && <p className="text-sm text-gold">{status}</p>}
+      </form>
+      <div className="rounded-2xl border border-line p-4">
+        <p className="text-xs text-gold">{pt ? "Legenda" : "Caption"}</p>
+        <p className="mt-2 whitespace-pre-wrap text-sm">{caption}</p>
+      </div>
+      {clip && (
+        <video src={clip} controls className="max-h-96 w-full rounded-2xl bg-black" />
+      )}
+      <p className="text-sm text-muted">
+        {pt
+          ? "A cara e o corpo ficam iguais, a não ser que o pedido diga o contrário. Os hooks estão na terceira opção, só se quiseres."
+          : "The face and body stay the same unless the request says otherwise. Hooks are the third option, only if you want them."}
+      </p>
+    </div>
+  );
+}
+
 const scenes = [
+  { id: "wall", pt: "Parede limpa", en: "Clean wall", a: "#f4f1ec", b: "#e7e2da" },
+  { id: "hotel", pt: "Hotel, luz quente", en: "Hotel, warm light", a: "#f3e6cf", b: "#c4a574" },
+  { id: "room", pt: "Quarto suave", en: "Soft bedroom", a: "#efe4d4", b: "#8d735c" },
   { id: "studio", pt: "Estúdio branco", en: "White studio", a: "#f7f1e8", b: "#e4d9c8" },
   { id: "grey", pt: "Cinza suave", en: "Soft grey", a: "#e6e1da", b: "#b7b1a8" },
   { id: "gold", pt: "Dourado", en: "Gold", a: "#f0e2c4", b: "#d6a15a" },
   { id: "night", pt: "Noite", en: "Night", a: "#241c16", b: "#0e0d0b" },
-  { id: "sea", pt: "Praia", en: "Beach", a: "#9fd0de", b: "#f0e2c4" },
-  { id: "office", pt: "Escritório", en: "Office", a: "#d5ddd8", b: "#7f978c" },
-  { id: "green", pt: "Natureza", en: "Nature", a: "#d5e2c4", b: "#6e8f62" },
 ];
 
 function PhotoLab({ lang }: { lang: Lang }) {
