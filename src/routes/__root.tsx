@@ -8,7 +8,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Atelier — Premium content studio" },
+      { title: "Nefer" },
       { name: "theme-color", content: "#12110e" },
     ],
     links: [

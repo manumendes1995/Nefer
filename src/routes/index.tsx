@@ -122,9 +122,9 @@ const backdrops = ["#1a140c", "#d6a15a", "#2c3a34", "#6e2e2a", "#e7e1d6", "#1d2a
 
 function Studio() {
   const { user, isPending } = useCurrentUserState();
-  const [lang, setLang] = useState<Lang>("pt");
+  const [lang, setLang] = useState<Lang>("en");
   const [tool, setTool] = useState<Tool>("hooks");
-  const [topic, setTopic] = useState("Rotina de pele para quem trabalha o dia todo");
+  const [topic, setTopic] = useState("A skin routine for people who work all day");
   const [platform, setPlatform] = useState<Platform>("reels");
   const [seconds, setSeconds] = useState<15 | 30 | 60>(30);
   const [note, setNote] = useState("");
@@ -161,22 +161,20 @@ function Studio() {
   const long = useMemo(() => longScript(topic, lang), [topic, lang]);
   const viral = useMemo(() => viralPack(topic, lang, platform), [topic, lang, platform]);
 
-  if (isPending) return <main className="grid min-h-screen place-items-center bg-bg text-muted">Atelier</main>;
+  if (isPending) return <main className="grid min-h-screen place-items-center bg-bg text-muted">Nefer</main>;
   if (!user) return <Navigate to="/login" />;
   if (access && !access.allowed) {
     return (
       <main className="grid min-h-screen place-items-center bg-bg px-4 text-fg">
         <div className="w-full max-w-md">
-          <p className="font-display text-4xl text-gold">Atelier</p>
+          <p className="font-display text-4xl text-gold">Nefer</p>
           <h1 className="mt-3 font-display text-3xl">{lang === "pt" ? "O teste de 3 dias acabou." : "The 3-day trial is over."}</h1>
           <p className="mt-2 text-muted">£15.99 / {lang === "pt" ? "mês" : "month"}</p>
           <button
             type="button"
             className="mt-6 min-h-11 rounded-full bg-gold px-5 text-gold-ink"
-            onClick={async () => {
-              const res = await startCheckout({ data: window.location.origin });
-              if (res.url) window.location.href = res.url;
-              else setNote(res.error);
+            onClick={() => {
+              window.location.href = "https://buy.stripe.com/eVq4gAcTh1g45Db9v3eEo03";
             }}
           >
             {lang === "pt" ? "Assinar" : "Subscribe"}
@@ -195,7 +193,7 @@ function Studio() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-6 md:grid-cols-[220px_1fr] md:px-8 md:py-10">
         <aside className="flex flex-col gap-6">
           <div>
-            <p className="font-display text-2xl text-gold">Atelier</p>
+            <p className="font-display text-2xl text-gold">Nefer</p>
             <p className="mt-1 text-sm text-muted">{t.kicker}</p>
             {access && (
               <p className="mt-2 text-xs text-gold">
@@ -226,14 +224,7 @@ function Studio() {
               );
             })}
           </nav>
-          <button
-            type="button"
-            onClick={() => setLanguage(lang === "pt" ? "en" : "pt")}
-            className="hidden min-h-11 items-center gap-2 text-sm text-muted md:flex"
-          >
-            <Languages className="h-4 w-4" />
-            {lang === "pt" ? "English" : "Português"}
-          </button>
+
         </aside>
 
         <section className="flex flex-col gap-6">
@@ -242,13 +233,10 @@ function Studio() {
               <h1 className="font-display text-4xl leading-tight md:text-5xl">{t.title}</h1>
               <p className="mt-3 max-w-xl text-muted">{t.sub}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setLanguage(lang === "pt" ? "en" : "pt")}
-              className="min-h-11 shrink-0 text-sm text-muted md:hidden"
-            >
-              {lang === "pt" ? "EN" : "PT"}
-            </button>
+            <div className="flex shrink-0 rounded-full border border-line bg-surface p-1">
+              <button type="button" onClick={() => setLanguage("en")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "en" ? "bg-gold text-gold-ink" : "text-muted"}`}>English</button>
+              <button type="button" onClick={() => setLanguage("pt")} className={`min-h-11 rounded-full px-4 text-sm ${lang === "pt" ? "bg-gold text-gold-ink" : "text-muted"}`}>Português</button>
+            </div>
           </header>
           <div className="grid gap-2 rounded-2xl border border-line p-4 text-sm">
             <p className="text-muted">
